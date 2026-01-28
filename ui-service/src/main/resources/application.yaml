@@ -1,0 +1,12 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ui-service
+
+services:
+  game-session:
+    url: http://localhost:8082
+  game-engine:
+    url: http://localhost:8081
