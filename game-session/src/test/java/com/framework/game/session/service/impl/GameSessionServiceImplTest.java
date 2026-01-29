@@ -14,6 +14,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.client.RestTemplate;
 
@@ -30,6 +31,9 @@ class GameSessionServiceImplTest {
 
     @Mock
     private RestTemplate restTemplate;
+
+    @Mock
+    private SimpMessagingTemplate messagingTemplate;
 
     @Mock
     private SessionRepository sessionRepository;
@@ -126,5 +130,6 @@ class GameSessionServiceImplTest {
         assertEquals(GameStatus.X_WINS, entity.getLastStatus());
         assertFalse(entity.getMoveHistory().isEmpty());
         verify(sessionRepository, atLeastOnce()).save(any(SessionEntity.class));
+        verify(messagingTemplate, atLeastOnce()).convertAndSend(anyString(), any(GameStateResponse.class));
     }
 }

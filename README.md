@@ -58,7 +58,6 @@ mvn test -pl game-engine
 ## Game Simulation
 
 - Click **"Start Simulation"** to create a new session and begin the automated game.
-- The UI polls the backend every second to update the board state and move history.
 - The simulation continues until there is a winner or a draw.
 
 ## Technical Details

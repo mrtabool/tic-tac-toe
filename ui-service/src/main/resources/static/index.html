@@ -3,143 +3,145 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Distributed Tic Tac Toe</title>
+    <title>Distributed Tic Tac Toe (WebSockets)</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
     <style>
-        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f0f2f5; }
-        .board { display: grid; grid-template-columns: repeat(3, 100px); grid-gap: 5px; margin-top: 20px; }
-        .cell { width: 100px; height: 100px; background-color: #fff; border: 2px solid #333; display: flex; justify-content: center; align-items: center; font-size: 2em; font-weight: bold; }
-        .controls { margin-top: 20px; }
-        button { padding: 10px 20px; font-size: 1em; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 5px; }
-        button:disabled { background-color: #ccc; }
-        .status { margin-top: 20px; font-size: 1.2em; font-weight: bold; }
-        .history { margin-top: 20px; width: 310px; height: 150px; overflow-y: auto; border: 1px solid #ccc; background: white; padding: 10px; }
-        .log-entry { border-bottom: 1px solid #eee; padding: 2px 0; font-size: 0.9em; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; display: flex; flex-direction: column; align-items: center; background-color: #f8f9fa; color: #333; }
+        h1 { margin-top: 30px; color: #2c3e50; }
+        .board { display: grid; grid-template-columns: repeat(3, 100px); grid-gap: 8px; margin-top: 25px; }
+        .cell { width: 100px; height: 100px; background-color: #fff; border: 2px solid #2c3e50; display: flex; justify-content: center; align-items: center; font-size: 2.5em; font-weight: bold; border-radius: 8px; transition: background 0.3s; }
+        .cell:hover { background-color: #ecf0f1; }
+        .controls { margin-top: 25px; }
+        button { padding: 12px 24px; font-size: 1.1em; cursor: pointer; background-color: #3498db; color: white; border: none; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .status { margin-top: 20px; font-size: 1.3em; font-weight: bold; color: #2980b9; }
+        .history { margin-top: 25px; width: 320px; height: 200px; overflow-y: auto; border: 1px solid #ddd; background: #fff; padding: 15px; border-radius: 8px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
+        .log-entry { border-bottom: 1px solid #eee; padding: 5px 0; font-size: 0.9em; color: #555; }
+        .log-entry:last-child { border-bottom: none; }
     </style>
 </head>
 <body>
-    <h1>Tic Tac Toe Simulation</h1>
-    <div class="controls">
-        <button id="startBtn">Start Simulation</button>
-    </div>
-    <div class="status" id="status">Status: Idle</div>
-    <div class="board" id="board">
-        <div class="cell" id="cell-0-0">-</div>
-        <div class="cell" id="cell-0-1">-</div>
-        <div class="cell" id="cell-0-2">-</div>
-        <div class="cell" id="cell-1-0">-</div>
-        <div class="cell" id="cell-1-1">-</div>
-        <div class="cell" id="cell-1-2">-</div>
-        <div class="cell" id="cell-2-0">-</div>
-        <div class="cell" id="cell-2-1">-</div>
-        <div class="cell" id="cell-2-2">-</div>
-    </div>
-    <div class="history" id="history">
-        <div>Move History:</div>
-    </div>
 
-    <script>
-        let sessionId = null;
-        let gameId = null;
-        let pollingInterval = null;
+<h1>Tic Tac Toe Simulation</h1>
 
-        const startBtn = document.getElementById('startBtn');
-        const statusDiv = document.getElementById('status');
-        const historyDiv = document.getElementById('history');
+<div class="controls">
+    <button id="startBtn">Start New Simulation</button>
+</div>
 
-        startBtn.addEventListener('click', async () => {
-            startBtn.disabled = true;
-            statusDiv.innerText = 'Status: Initializing...';
-            statusDiv.style.color = 'black';
-            historyDiv.innerHTML = '<div>Move History:</div>';
-            clearBoard();
+<div class="status" id="status">Status: Ready</div>
 
-            try {
-                const sessionRes = await fetch('/api/sessions', { method: 'POST' });
-                if (!sessionRes.ok) {
-                    const errorData = await sessionRes.json();
-                    throw new Error(errorData.message || 'Failed to create session');
-                }
-                const session = await sessionRes.json();
-                sessionId = session.sessionId;
-                gameId = session.gameId;
+<div class="board" id="board">
+    <div class="cell" id="cell-0-0">-</div>
+    <div class="cell" id="cell-0-1">-</div>
+    <div class="cell" id="cell-0-2">-</div>
+    <div class="cell" id="cell-1-0">-</div>
+    <div class="cell" id="cell-1-1">-</div>
+    <div class="cell" id="cell-1-2">-</div>
+    <div class="cell" id="cell-2-0">-</div>
+    <div class="cell" id="cell-2-1">-</div>
+    <div class="cell" id="cell-2-2">-</div>
+</div>
 
-                statusDiv.innerText = 'Status: Starting simulation...';
-                const simulateRes = await fetch(`/api/sessions/${sessionId}/simulate`, { method: 'POST' });
-                if (!simulateRes.ok) {
-                    const errorData = await simulateRes.json();
-                    throw new Error(errorData.message || 'Failed to start simulation');
-                }
+<div class="history" id="history">
+    <strong style="display: block; margin-bottom: 10px;">Live History:</strong>
+</div>
 
-                startPolling();
-            } catch (err) {
-                console.error(err);
-                statusDiv.innerText = 'Status: Error - ' + err.message;
-                statusDiv.style.color = 'red';
-                startBtn.disabled = false;
-            }
-        });
+<script>
+    let sessionId = null;
+    let stompClient = null;
 
-        function clearBoard() {
-            for (let r = 0; r < 3; r++) {
-                for (let c = 0; c < 3; c++) {
-                    document.getElementById(`cell-${r}-${c}`).innerText = '-';
-                }
-            }
-        }
+    const startBtn = document.getElementById('startBtn');
+    const statusDiv = document.getElementById('status');
+    const historyDiv = document.getElementById('history');
 
-        function startPolling() {
-            if (pollingInterval) clearInterval(pollingInterval);
-            pollingInterval = setInterval(updateGameState, 1000);
-        }
 
-        async function updateGameState() {
-            try {
-                // Poll session for status and history
-                const sessionRes = await fetch(`/api/sessions/${sessionId}`);
-                if (!sessionRes.ok) {
-                    const errorData = await sessionRes.json();
-                    throw new Error(errorData.message || 'Failed to poll session');
-                }
-                const session = await sessionRes.json();
+    function connectWebSocket(id) {
+        const socket = new SockJS('http://localhost:8082/ws-game');
+        stompClient = Stomp.over(socket);
 
-                statusDiv.innerText = `Status: ${session.lastStatus}`;
-                
-                // Update history
-                historyDiv.innerHTML = '<div>Move History:</div>';
-                session.moveHistory.forEach(move => {
-                    const div = document.createElement('div');
-                    div.className = 'log-entry';
-                    div.innerText = move;
-                    historyDiv.appendChild(div);
-                });
+        stompClient.debug = null;
 
-                // Poll engine for board
-                const gameRes = await fetch(`/api/games/${gameId}`);
-                if (gameRes.ok) {
-                    const game = await gameRes.json();
-                    updateBoard(game.board);
-                }
+        stompClient.connect({}, function (frame) {
+            console.log('Connected to WebSocket!');
+            statusDiv.innerText = 'Status: Connected! Watching game...';
 
-                if (session.lastStatus !== 'IN_PROGRESS') {
-                    clearInterval(pollingInterval);
+            stompClient.subscribe('/topic/game/' + id, function (message) {
+                const gameState = JSON.parse(message.body);
+
+                updateBoard(gameState.board);
+
+                statusDiv.innerText = `Status: ${gameState.status}`;
+
+                const log = document.createElement('div');
+                log.className = 'log-entry';
+                log.innerText = `New move! Current status: ${gameState.status}`;
+                historyDiv.appendChild(log);
+                historyDiv.scrollTop = historyDiv.scrollHeight;
+
+                if (gameState.status !== 'IN_PROGRESS') {
+                    statusDiv.style.color = '#e74c3c';
+                    stompClient.disconnect();
                     startBtn.disabled = false;
                 }
-            } catch (err) {
-                console.error('Polling error:', err);
-                statusDiv.innerText = 'Status: Polling Error - ' + err.message;
-                statusDiv.style.color = 'red';
-                clearInterval(pollingInterval);
-                startBtn.disabled = false;
-            }
-        }
+            });
+        }, function (error) {
+            console.error('WebSocket Error:', error);
+            statusDiv.innerText = 'Error: Connection failed';
+            startBtn.disabled = false;
+        });
+    }
 
-        function updateBoard(board) {
-            for (let r = 0; r < 3; r++) {
-                for (let c = 0; c < 3; c++) {
-                    document.getElementById(`cell-${r}-${c}`).innerText = board[r][c];
-                }
+    startBtn.addEventListener('click', async () => {
+        startBtn.disabled = true;
+        statusDiv.innerText = 'Status: Initializing...';
+        statusDiv.style.color = '#2980b9';
+        clearBoard();
+
+        historyDiv.innerHTML = '<strong style="display: block; margin-bottom: 10px;">Live History:</strong>';
+
+        try {
+            const sessionRes = await fetch('/api/sessions', { method: 'POST' });
+            const session = await sessionRes.json();
+            sessionId = session.sessionId;
+
+            connectWebSocket(sessionId);
+
+            setTimeout(async () => {
+                await fetch(`/api/sessions/${sessionId}/simulate`, { method: 'POST' });
+            }, 500);
+
+        } catch (err) {
+            console.error('Initial error:', err);
+            statusDiv.innerText = 'Error: ' + err.message;
+            startBtn.disabled = false;
+        }
+    });
+
+    function updateBoard(board) {
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                const cell = document.getElementById(`cell-${r}-${c}`);
+                cell.innerText = board[r][c];
+                if (board[r][c] === 'X') cell.style.color = '#e67e22';
+                if (board[r][c] === 'O') cell.style.color = '#9b59b6';
+                if (board[r][c] === '-') cell.style.color = '#ccc';
             }
         }
-    </script>
+    }
+
+    function clearBoard() {
+        for (let r = 0; r < 3; r++) {
+            for (let c = 0; c < 3; c++) {
+                const cell = document.getElementById(`cell-${r}-${c}`);
+                cell.innerText = '-';
+                cell.style.color = '#ccc';
+            }
+        }
+    }
+</script>
 </body>
 </html>

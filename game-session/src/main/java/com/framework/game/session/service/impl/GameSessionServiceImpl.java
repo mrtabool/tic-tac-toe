@@ -11,6 +11,7 @@ import com.framework.game.session.exception.GameAlreadyFinishedException;
 import com.framework.game.session.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -24,6 +25,7 @@ import java.util.UUID;
 public class GameSessionServiceImpl implements GameSessionService {
     private final RestTemplate restTemplate;
     private final SessionRepository sessionRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Value("${services.game-engine.url}")
     private String engineUrl;
@@ -102,6 +104,8 @@ public class GameSessionServiceImpl implements GameSessionService {
 
             // We save the intermediate state
             sessionRepository.save(session);
+
+            messagingTemplate.convertAndSend("/topic/game/" + sessionId, result);
 
             if (result.getStatus() != GameStatus.IN_PROGRESS) break;
 
