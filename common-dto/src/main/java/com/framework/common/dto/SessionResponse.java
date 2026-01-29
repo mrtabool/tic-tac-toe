@@ -21,4 +21,5 @@ public class SessionResponse {
     private GameStatus lastStatus;
     private List<String> moveHistory;
     private LocalDateTime createdAt;
+    private String[][] board;
 }

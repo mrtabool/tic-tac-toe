@@ -105,7 +105,10 @@ public class GameSessionServiceImpl implements GameSessionService {
             // We save the intermediate state
             sessionRepository.save(session);
 
-            messagingTemplate.convertAndSend("/topic/game/" + sessionId, result);
+            SessionResponse sessionResponse = toResponse(session);
+            sessionResponse.setBoard(result.getBoard());
+
+            messagingTemplate.convertAndSend("/topic/game/" + sessionId, sessionResponse);
 
             if (result.getStatus() != GameStatus.IN_PROGRESS) break;
 

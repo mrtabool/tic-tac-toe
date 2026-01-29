@@ -130,6 +130,6 @@ class GameSessionServiceImplTest {
         assertEquals(GameStatus.X_WINS, entity.getLastStatus());
         assertFalse(entity.getMoveHistory().isEmpty());
         verify(sessionRepository, atLeastOnce()).save(any(SessionEntity.class));
-        verify(messagingTemplate, atLeastOnce()).convertAndSend(anyString(), any(GameStateResponse.class));
+        verify(messagingTemplate, atLeastOnce()).convertAndSend(anyString(), any(SessionResponse.class));
     }
 }
