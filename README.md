@@ -10,7 +10,7 @@ This is a distributed Tic Tac Toe application where microservices play against e
 
 ## Prerequisites
 
-- Java 21
+- Java 21 (With support for dynamic agent loading)
 - Maven
 
 ## How to Run
@@ -57,12 +57,12 @@ mvn test -pl game-engine
 
 ## Game Simulation
 
-- Click **"Start Simulation"** to create a new session and begin the automated game.
-- The simulation continues until there is a winner or a draw.
+- Click **"Start New Game"** to create a new session.
+- Watch the live simulation as the services play against each other in real-time.
 
 ## Technical Details
 
-- **In-Memory Storage**: Uses H2 in-memory database for both Game Engine and Game Session services.
-- **REST Communication**: Services communicate via REST APIs using `RestTemplate`.
-- **Lombok**: Used for reducing boilerplate code.
-- **DTOs**: Shared objects for state and requests are located in the `common-dto` module.
+- **Real-time Updates**: Uses WebSockets (STOMP/SockJS) for live move streaming from Session Service to UI.
+- **REST Communication**: Synchronous communication between services using `RestTemplate`.
+- **In-Memory Storage**: H2 Database for session and game state persistence.
+- **DTOs**: Centralized models in the `common-dto` module for system-wide consistency.
